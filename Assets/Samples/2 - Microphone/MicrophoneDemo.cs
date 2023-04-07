@@ -1,5 +1,8 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -21,9 +24,21 @@ namespace Whisper.Samples
         public Text timeText;
         public Dropdown languageDropdown;
 
+        [SerializeField]
+        private bool isIntervalRun = true;
+        [SerializeField]
+        private float interval = 3f;
+
+        private float elapsedTime = 0f;
+
         private float _recordStart;
         private bool _isRecording;
         private AudioClip _clip;
+
+        //音声データ
+        private List<float> voiceDataList = new List<float>();
+
+        private bool runningTranscribe = false;
 
         private void Awake()
         {
@@ -39,6 +54,20 @@ namespace Whisper.Samples
             var timePassed = Time.realtimeSinceStartup - _recordStart;
             if (timePassed > maxLengthSec)
                 StopRecord();
+
+            if(_isRecording)
+            {
+                elapsedTime += Time.deltaTime;
+
+                if(isIntervalRun
+                    && elapsedTime > interval)
+                {
+                    elapsedTime = 0f;
+
+                    AddRecord();
+                    UpdateText();
+                }
+            }
         }
 
         public void OnButtonPressed()
@@ -68,12 +97,31 @@ namespace Whisper.Samples
             _isRecording = true;
         }
 
+        private void AddRecord()
+        {
+            //音声データを追加
+            var data = GetTrimmedData();
+
+            //毎回一から取得しておりAddする必要はなさそうなので、暫定対応として毎回Clearする
+            voiceDataList.Clear();
+
+            voiceDataList.AddRange(data);
+        }
+
+        private void UpdateText()
+        {
+            Transcribe(voiceDataList.ToArray());
+        }
+
         public void StopRecord()
         {
             if (!_isRecording)
                 return;
 
+            //音声データを追加
             var data = GetTrimmedData();
+            AddRecord();
+
             if (echo)
             {
                 var echoClip = AudioClip.Create("echo", data.Length,
@@ -85,7 +133,8 @@ namespace Whisper.Samples
             Microphone.End(null);
             _isRecording = false;
 
-            Transcribe(data);
+            //Transcribe(data);
+            //UpdateText();
         }
 
         private float[] GetTrimmedData()
@@ -107,6 +156,9 @@ namespace Whisper.Samples
 
         private async void Transcribe(float[] data)
         {
+            if (runningTranscribe) return;
+            runningTranscribe = true;
+
             var sw = new Stopwatch();
             sw.Start();
             
@@ -116,7 +168,20 @@ namespace Whisper.Samples
             if (res == null)
                 return;
 
-            outputText.text = res.Result;
+            SetText(res.Result);
+
+            runningTranscribe = false;
+        }
+
+        private void SetText(string str)
+        {
+            StringBuilder sb = new StringBuilder();
+            for(int i=0; i<str.Length; i++)
+            {
+                sb.Append(str[i]);
+                if (i % 15 == 0 && i>=1) sb.AppendLine();
+            }
+            outputText.text = sb.ToString();
         }
     }
 }

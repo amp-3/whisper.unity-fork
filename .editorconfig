@@ -1,0 +1,20 @@
+﻿# Top-most EditorConfig file
+root = true
+
+# 基本設定
+[*]
+end_of_line = lf
+charset = utf-8
+indent_style = space
+indent_size = 4
+
+[*.cs]
+charset = utf-8-bom
+
+[*.bat]
+end_of_line = crlf
+# batでは日本語が含まれる場合はShift-JIS以外では動作しない問題がある
+# 一方でeditorconfigではShift-JISがサポートされていない模様だが、サポートされていない文字コードの指定により、
+# 上位(*)のcharset設定を上書きして「エディタのデフォルト挙動」に戻る効果をVisualStudio2019では確認したため、元々Shift-JISのファイルがutf-8に変わらないように定義を設けておく
+# https://www.codegrid.net/articles/2015-team-dev-1/
+charset = shift_jis
